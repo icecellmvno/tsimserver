@@ -1,77 +1,114 @@
-# TsimServer - TsimCloud SIM Server
+# TsimServer - Android SMS Gateway System
 
-TsimCloud protokolüne uygun, Go dilinde yazılmış multithread SIM sunucusu. WebSocket üzerinden Android cihazlarla iletişim kurar ve SMS, USSD yönetimi yapar.
+A complete Android SMS Gateway system built with Go, featuring intelligent routing, site management, and real-time monitoring. Communicates with Android devices via WebSocket and manages SMS, USSD operations with advanced routing capabilities.
 
-## Özellikler
+## Features
 
-- **WebSocket İletişimi**: Android cihazlarla gerçek zamanlı iletişim
-- **SMS Yönetimi**: SMS gönderme, alma ve teslimat raporları
-- **USSD Komutları**: USSD komutları gönderme ve sonuçları alma
-- **Cihaz Yönetimi**: Cihaz kaydı, durum takibi ve uzaktan kontrol
-- **SIM Kart Yönetimi**: SIM kart bilgileri ve aktivasyon durumu
-- **Alarm Sistemi**: Cihaz alarmları ve sunucu alarmları
-- **İstatistikler**: Kapsamlı raporlama ve dashboard
-- **Multithread**: Eşzamanlı çoklu bağlantı desteği
-- **RESTful API**: Kapsamlı web API
+- **Smart SMS Routing**: Intelligent device selection based on country, operator, battery, and signal strength
+- **Site Management**: Multi-location SMS hub management with device groups
+- **Real-time Communication**: WebSocket communication with Android devices
+- **SMS Management**: Send, receive SMS and delivery reports with retry logic and priority queuing
+- **USSD Commands**: Send USSD commands and receive responses
+- **Device Management**: Device registration, status monitoring, and remote control
+- **SIM Card Management**: Multi-SIM support with operator-based routing
+- **Admin Test System**: Special admin-only test SMS and commands
+- **Alarm System**: Comprehensive monitoring with automated alerts
+- **Statistics & Reporting**: Advanced analytics and dashboard
+- **Authentication & Authorization**: JWT-based auth with RBAC using Casbin
+- **Scalable Architecture**: Microservices with separate binaries for different functions
+- **RESTful API**: Comprehensive web API with full CRUD operations
 
-## Teknolojiler
+## Technologies
 
-- **Go Fiber**: Web framework
-- **GORM**: ORM library
-- **PostgreSQL**: Veritabanı
-- **Redis**: Cache ve session yönetimi
-- **RabbitMQ**: Mesaj kuyruğu
-- **WebSocket**: Gerçek zamanlı iletişim
-- **Viper**: Konfigürasyon yönetimi
+- **Go Fiber**: High-performance web framework
+- **GORM**: Feature-rich ORM library
+- **PostgreSQL**: Primary database with advanced features
+- **Redis**: Caching and session management
+- **RabbitMQ**: Message queue for delivery reports
+- **WebSocket**: Real-time bidirectional communication
+- **Casbin**: RBAC authorization
+- **JWT**: Secure authentication tokens
+- **Docker**: Containerization support
 
-## Kurulum
+## Architecture
 
-### Gereksinimler
+### Modular CMD Structure
+- **cmd/server**: Main API server (port 8080)
+- **cmd/websocket**: Dedicated WebSocket server (port 8081)
+- **cmd/migrate**: Database migration tool
+- **cmd/seed**: Data seeding utility
+
+### Smart SMS Routing System
+```
+SMS Request → Country Detection → Operator Matching → Device Selection → WebSocket Delivery
+     ↓               ↓                    ↓                   ↓              ↓
+Phone Number → Extract Code → Find Groups → Best Device → Send to Android
+```
+
+## Quick Start
+
+### Prerequisites
 
 - Go 1.21+
 - PostgreSQL 13+
 - Redis 6+
-- RabbitMQ 3.8+
+- RabbitMQ 3.8+ (optional)
+- Docker & Docker Compose (optional)
 
-### Adımlar
+### Installation
 
-1. **Depoyu klonlayın**
+1. **Clone the repository**
 ```bash
-git clone <repo-url>
+git clone https://github.com/icecellmvno/tsimserver
 cd tsimserver
 ```
 
-2. **Bağımlılıkları yükleyin**
+2. **Install dependencies**
 ```bash
 go mod download
 ```
 
-3. **Konfigürasyonu düzenleyin**
+3. **Configure the system**
 ```bash
 cp config.yaml.example config.yaml
 nano config.yaml
 ```
 
-4. **Veritabanını hazırlayın**
+4. **Setup database**
 ```sql
 CREATE DATABASE tsimserver;
 CREATE USER tsimserver WITH PASSWORD 'password';
 GRANT ALL PRIVILEGES ON DATABASE tsimserver TO tsimserver;
 ```
 
-5. **Sunucuyu başlatın**
+5. **Start the system**
 ```bash
-# Makefile kullanarak (önerilen)
-make setup          # Geliştirme ortamı kurulumu
-make run-server     # Ana sunucuyu başlat
+# Using Makefile (recommended)
+make setup          # Development environment setup
+make migrate        # Run database migrations
+make seed           # Seed initial data
+make run-server     # Start main server
 
-# Manuel olarak
+# Or manually
 go run cmd/server/main.go
 ```
 
-## Konfigürasyon
+### Docker Setup
+```bash
+# Start all services
+docker-compose up -d
 
-`config.yaml` dosyasındaki ayarları ihtiyaçlarınıza göre düzenleyin:
+# Run migrations and seeding
+make migrate
+make seed
+
+# Start the application
+make run-server
+```
+
+## Configuration
+
+Edit the `config.yaml` file according to your needs:
 
 ```yaml
 server:
@@ -100,6 +137,7 @@ jwt:
   expire_hours: 24
 
 websocket:
+  port: 8081
   endpoint: "/ws"
   read_buffer_size: 1024
   write_buffer_size: 1024
@@ -110,196 +148,271 @@ logging:
 
 ## API Endpoints
 
-### Cihaz Yönetimi
-- `GET /api/v1/devices` - Tüm cihazları listele
-- `POST /api/v1/devices` - Yeni cihaz oluştur
-- `GET /api/v1/devices/:id` - Cihaz detayları
-- `PUT /api/v1/devices/:id` - Cihaz güncelle
-- `DELETE /api/v1/devices/:id` - Cihaz sil
-- `POST /api/v1/devices/:id/disable` - Cihazı devre dışı bırak
-- `POST /api/v1/devices/:id/enable` - Cihazı etkinleştir
-- `POST /api/v1/devices/:id/alarm` - Cihaza alarm gönder
+### Authentication
+- `POST /api/v1/auth/login` - User login
+- `POST /api/v1/auth/refresh` - Refresh JWT token
+- `POST /api/v1/auth/logout` - User logout
 
-### SMS Yönetimi
-- `POST /api/v1/sms/send` - SMS gönder
-- `GET /api/v1/sms/incoming` - Gelen SMS'ler
-- `GET /api/v1/sms/outgoing` - Giden SMS'ler
-- `GET /api/v1/sms/stats` - SMS istatistikleri
-- `GET /api/v1/sms/device/:deviceId` - Cihaza özel SMS'ler
+### Site Management
+- `GET /api/v1/sites` - List all sites
+- `POST /api/v1/sites` - Create new site
+- `GET /api/v1/sites/:id` - Get site details
+- `PUT /api/v1/sites/:id` - Update site
+- `DELETE /api/v1/sites/:id` - Delete site
+- `GET /api/v1/sites/:id/stats` - Site statistics
 
-### USSD Yönetimi
-- `POST /api/v1/ussd/send` - USSD komutu gönder
-- `GET /api/v1/ussd/device/:deviceId` - Cihaza özel USSD komutları
+### Device Groups
+- `GET /api/v1/device-groups` - List device groups
+- `POST /api/v1/device-groups` - Create device group
+- `GET /api/v1/device-groups/:id` - Get group details
+- `PUT /api/v1/device-groups/:id` - Update group
+- `DELETE /api/v1/device-groups/:id` - Delete group
 
-### Alarm Yönetimi
-- `GET /api/v1/alarms` - Alarmları listele
-- `GET /api/v1/alarms/:id` - Alarm detayları
-- `POST /api/v1/alarms/:id/resolve` - Alarmı çözümle
-- `DELETE /api/v1/alarms/:id` - Alarm sil
+### Device Management
+- `GET /api/v1/devices` - List all devices
+- `POST /api/v1/devices` - Create new device
+- `GET /api/v1/devices/:id` - Device details
+- `PUT /api/v1/devices/:id` - Update device
+- `DELETE /api/v1/devices/:id` - Delete device
+- `POST /api/v1/devices/:id/disable` - Disable device
+- `POST /api/v1/devices/:id/enable` - Enable device
 
-### İstatistikler
-- `GET /api/v1/stats/dashboard` - Dashboard istatistikleri
-- `GET /api/v1/stats/devices` - Cihaz istatistikleri
+### Smart SMS Gateway
+- `POST /api/v1/sms-gateway/send` - Send SMS with intelligent routing
+- `POST /api/v1/sms-gateway/test` - Admin test SMS
+- `POST /api/v1/sms-gateway/test-command` - Send test commands to devices
+- `POST /api/v1/sms-gateway/delivery-report` - Process delivery reports
 
-## WebSocket Protokolü
+### SMS Management
+- `GET /api/v1/sms/incoming` - List incoming SMS
+- `GET /api/v1/sms/outgoing` - List outgoing SMS
+- `GET /api/v1/sms/stats` - SMS statistics
+- `GET /api/v1/sms/device/:deviceId` - Device-specific SMS
 
-Sunucu `/ws` endpoint'inde WebSocket bağlantılarını kabul eder. Protokol detayları için `protocol.md` dosyasına bakın.
+### USSD Management
+- `POST /api/v1/ussd/send` - Send USSD command
+- `GET /api/v1/ussd/device/:deviceId` - Device USSD commands
 
-### Kimlik Doğrulama
+### User Management
+- `GET /api/v1/users` - List users
+- `POST /api/v1/users` - Create user
+- `GET /api/v1/users/:id` - Get user details
+- `PUT /api/v1/users/:id` - Update user
+- `DELETE /api/v1/users/:id` - Delete user
+
+### Alarm Management
+- `GET /api/v1/alarms` - List alarms
+- `GET /api/v1/alarms/:id` - Alarm details
+- `POST /api/v1/alarms/:id/resolve` - Resolve alarm
+- `DELETE /api/v1/alarms/:id` - Delete alarm
+
+### Statistics
+- `GET /api/v1/stats/dashboard` - Dashboard statistics
+- `GET /api/v1/stats/devices` - Device statistics
+
+## WebSocket Protocol
+
+The server accepts WebSocket connections at `/ws` endpoint. See `protocol.md` for detailed protocol specifications.
+
+### Authentication
 ```json
 {
-    "type": "auth",
-    "connectkey": "CIHAZIN_BAGLANTI_ANAHTARI"
+    "action": "auth",
+    "data": {
+        "connect_key": "DEVICE_CONNECTION_KEY"
+    }
 }
 ```
 
-### Cihaz Kaydı
+### Device Registration
 ```json
 {
-    "type": "device_registration",
-    "payload": {
+    "action": "device_registration",
+    "data": {
         "device_id": "string",
         "device_name": "string",
         "model": "string",
         "android_version": "string",
         "app_version": "string",
-        "batteryLevel": 85,
-        "batteryStatus": "charging",
+        "battery_level": 85,
+        "battery_status": "charging",
         "latitude": 41.0082,
         "longitude": 28.9784,
         "timestamp": 1640995200,
-        "simCards": [...]
+        "sim_cards": [...]
     }
 }
 ```
 
-## Geliştirme
+### SMS Sending
+```json
+{
+    "action": "send_sms",
+    "data": {
+        "target": "+905551234567",
+        "message": "Test message",
+        "sim_slot": 0,
+        "internal_log_id": 12345
+    }
+}
+```
 
-### Proje Yapısı
+## Development
+
+### Project Structure
 ```
 tsimserver/
-├── auth/           # Casbin yetkilendirme
-├── cache/          # Redis cache yönetimi
-├── cmd/            # Komut satırı uygulamaları
-│   ├── server/     # Ana API sunucusu
-│   ├── migrate/    # Veritabanı migration
-│   ├── seed/       # Veri seeding
-│   └── websocket/  # WebSocket sunucusu
-├── config/         # Konfigürasyon
-├── database/       # Veritabanı bağlantısı
-├── handlers/       # HTTP ve WebSocket handler'lar
-├── middleware/     # Auth middleware'ler
-├── models/         # Veritabanı modelleri
-├── queue/          # RabbitMQ mesaj kuyruğu
-├── seeders/        # Veri seeding fonksiyonları
-├── types/          # WebSocket mesaj tipleri
-├── utils/          # JWT ve yardımcı fonksiyonlar
-├── websocket/      # WebSocket yönetimi
-├── Makefile        # Build ve çalıştırma komutları
-└── config.yaml     # Konfigürasyon dosyası
+├── auth/               # Casbin authorization
+├── cache/              # Redis cache management
+├── cmd/                # Command line applications
+│   ├── server/         # Main API server
+│   ├── migrate/        # Database migration tool
+│   ├── seed/           # Data seeding utility
+│   └── websocket/      # WebSocket server
+├── config/             # Configuration management
+├── database/           # Database connection and models
+├── handlers/           # HTTP and WebSocket handlers
+├── middleware/         # Authentication middleware
+├── models/             # Database models (GORM)
+├── queue/              # RabbitMQ message queue
+├── seeders/            # Data seeding functions
+├── types/              # WebSocket message types
+├── utils/              # JWT and utility functions
+├── websocket/          # WebSocket connection management
+├── Makefile            # Build and run commands
+├── DATABASE_SCHEMA.md  # Comprehensive database documentation
+├── WORKFLOW_DOCUMENTATION.md # System workflows
+└── config.yaml         # Configuration file
 ```
 
-### Makefile Komutları
+### Makefile Commands
 
-Proje build ve yönetim işlemleri için Makefile kullanın:
+Use Makefile for project build and management:
 
 ```bash
-# Build komutları
-make build              # Tüm binary'leri build et
-make build-server       # Sadece server build et
-make build-migrate      # Sadece migrate build et
-make build-seed         # Sadece seed build et
-make build-websocket    # Sadece websocket build et
+# Build commands
+make build              # Build all binaries
+make build-server       # Build server only
+make build-migrate      # Build migrate only
+make build-seed         # Build seed only
+make build-websocket    # Build websocket only
 
-# Veritabanı komutları
-make migrate            # Migration'ları çalıştır
-make migrate-reset      # Veritabanını sıfırla
-make migrate-rollback   # Migration'ları geri al
-make seed               # Tüm verileri seed et
-make seed-world         # Sadece world verilerini seed et
-make seed-auth          # Sadece auth verilerini seed et
+# Database commands
+make migrate            # Run migrations
+make migrate-reset      # Reset database
+make migrate-rollback   # Rollback migrations
+make seed               # Seed all data
+make seed-world         # Seed world data only
+make seed-auth          # Seed auth data only
+make seed-site          # Seed site data only
 
-# Çalıştırma komutları
-make run-server         # Ana sunucuyu çalıştır
-make run-websocket      # WebSocket sunucusunu çalıştır
+# Run commands
+make run-server         # Run main server
+make run-websocket      # Run WebSocket server
 
-# Kurulum komutları
-make setup              # Geliştirme ortamı kurulumu
-make setup-prod         # Production kurulumu
+# Setup commands
+make setup              # Development environment setup
+make setup-prod         # Production setup
 
-# Yardımcı komutları
-make help               # Tüm komutları listele
-make clean              # Build dosyalarını temizle
-make deps               # Bağımlılıkları güncelle
+# Utility commands
+make help               # List all commands
+make clean              # Clean build files
+make deps               # Update dependencies
 ```
 
-### Test Etme
+### Testing
+
 ```bash
-# Sunucuyu geliştirme modunda çalıştır
+# Start server in development mode
 make run-server
 
 # Health check
 curl http://localhost:8080/api/v1/health
 
-# Authentication endpoint test
+# Authentication test
 curl -X POST http://localhost:8080/api/v1/auth/login \
   -H "Content-Type: application/json" \
   -d '{"username":"admin","password":"admin123"}'
 
-# WebSocket bağlantısı test et
+# Test SMS sending with intelligent routing
+curl -X POST http://localhost:8080/api/v1/sms-gateway/send \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"target":"+905551234567","message":"Test message"}'
+
+# WebSocket connection test
 curl --include \
      --no-buffer \
      --header "Connection: Upgrade" \
      --header "Upgrade: websocket" \
      --header "Sec-WebSocket-Key: x3JJHMbDL1EzLkh9GBhXDw==" \
      --header "Sec-WebSocket-Version: 13" \
-     http://localhost:8080/ws
+     http://localhost:8081/ws
 
-# WebSocket sunucusunu ayrı çalıştır
-make run-websocket    # Port 8081'de çalışır
+# Run separate WebSocket server
+make run-websocket    # Runs on port 8081
 ```
 
-### Kimlik Doğrulama ve Yetkilendirme
+### Authentication & Authorization
 
-Sistem JWT tabanlı kimlik doğrulama ve Casbin RBAC yetkilendirme kullanır:
+The system uses JWT-based authentication and Casbin RBAC authorization:
 
-#### Varsayılan Kullanıcı
-- **Kullanıcı adı**: admin
-- **Şifre**: admin123
-- **Rol**: administrator (tam erişim)
+#### Default User
+- **Username**: admin
+- **Password**: admin123
+- **Role**: administrator (full access)
 
-#### Roller ve İzinler
-- **admin**: Tüm kaynaklara tam erişim
-- **manager**: Cihaz ve SMS yönetimi
-- **operator**: Sınırlı operasyon erişimi
-- **viewer**: Sadece okuma erişimi
+#### Roles and Permissions
+- **admin**: Full access to all resources
+- **manager**: Device and SMS management
+- **operator**: Limited operation access
+- **viewer**: Read-only access
 
-#### API Kullanımı
+#### API Usage
 ```bash
 # Login
 curl -X POST http://localhost:8080/api/v1/auth/login \
   -H "Content-Type: application/json" \
   -d '{"username":"admin","password":"admin123"}'
 
-# JWT token ile protected endpoint
+# Use JWT token for protected endpoints
 curl -H "Authorization: Bearer YOUR_JWT_TOKEN" \
      http://localhost:8080/api/v1/devices
 ```
-     --header "Sec-WebSocket-Key: SGVsbG8sIHdvcmxkIQ==" \
-     --header "Sec-WebSocket-Version: 13" \
-     http://localhost:8080/ws
+
+### Smart SMS Routing
+
+The system implements intelligent SMS routing based on:
+
+1. **Country Detection**: Extract country code from phone number
+2. **Site Selection**: Find appropriate site for the country
+3. **Device Group Matching**: Match operator (Turkcell, Vodafone, etc.)
+4. **Device Selection**: Choose best available device based on:
+   - Battery level (≥10%)
+   - Signal strength
+   - Last seen time
+   - Availability status
+
+```go
+// Example: Send SMS to Turkey (+90) number
+// System automatically:
+// 1. Detects country: TR
+// 2. Finds Turkey sites
+// 3. Matches Turkcell operator from number
+// 4. Selects best Turkcell device
+// 5. Sends SMS via WebSocket
 ```
 
 ## Deployment
 
-### Docker ile
+### Docker Deployment
 ```dockerfile
 FROM golang:1.21-alpine AS builder
 WORKDIR /app
 COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
-RUN go build -o tsimserver main.go
+RUN go build -o tsimserver cmd/server/main.go
 
 FROM alpine:latest
 RUN apk --no-cache add ca-certificates
@@ -309,35 +422,121 @@ COPY --from=builder /app/config.yaml .
 CMD ["./tsimserver"]
 ```
 
-### Systemd ile
+### Production Deployment with Docker Compose
+```yaml
+version: '3.8'
+services:
+  tsimserver:
+    build: .
+    ports:
+      - "8080:8080"
+      - "8081:8081"
+    environment:
+      - DB_HOST=postgres
+      - REDIS_HOST=redis
+    depends_on:
+      - postgres
+      - redis
+      
+  postgres:
+    image: postgres:13
+    environment:
+      POSTGRES_DB: tsimserver
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      
+  redis:
+    image: redis:6-alpine
+    
+  rabbitmq:
+    image: rabbitmq:3.8-management
+```
+
+### Systemd Service
 ```ini
 [Unit]
-Description=TsimServer
-After=network.target
+Description=TsimServer Android SMS Gateway
+After=network.target postgresql.service redis.service
 
 [Service]
 Type=simple
 User=tsimserver
 WorkingDirectory=/opt/tsimserver
-ExecStart=/opt/tsimserver/tsimserver
+ExecStart=/opt/tsimserver/bin/tsimserver
 Restart=always
+RestartSec=10
 
 [Install]
 WantedBy=multi-user.target
 ```
 
-## Lisans
+## Database Schema
 
-Bu proje MIT lisansı altında lisanslanmıştır.
+The system uses a comprehensive database schema with 20+ tables:
 
-## Katkıda Bulunma
+- **Geographic Data**: regions, countries, states, cities (world data)
+- **Site Management**: sites, device_groups
+- **Device Management**: devices, sim_cards, device_statuses
+- **SMS & Messaging**: sms_messages, ussd_commands
+- **User & Auth**: users, roles, permissions, sessions
+- **Monitoring**: alarms
 
-1. Fork yapın
-2. Feature branch oluşturun (`git checkout -b feature/amazing-feature`)
-3. Değişikliklerinizi commit edin (`git commit -m 'Add amazing feature'`)
-4. Branch'inizi push edin (`git push origin feature/amazing-feature`)
-5. Pull Request oluşturun
+See `DATABASE_SCHEMA.md` for detailed documentation.
 
-## Destek
+## Workflows
 
-Herhangi bir sorun için issue açabilir veya [email] üzerinden iletişime geçebilirsiniz. 
+The system implements complex workflows for:
+
+- Smart SMS routing and delivery
+- Device management and monitoring
+- Site and device group management
+- Authentication and authorization
+- Admin testing capabilities
+- Real-time alarm management
+
+See `WORKFLOW_DOCUMENTATION.md` for detailed workflow documentation.
+
+## Performance & Monitoring
+
+### Key Performance Indicators
+- **SMS Sending Success Rate**: >99%
+- **API Response Time**: <200ms
+- **WebSocket Latency**: <50ms
+- **Device Availability**: >95%
+- **Database Query Time**: <100ms
+
+### Monitoring Features
+- Real-time device status monitoring
+- Battery level and signal strength tracking
+- Automatic alarm generation
+- Performance metrics and analytics
+- Delivery report tracking
+
+## License
+
+This project is licensed under the MIT License.
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+## Support
+
+For any issues or questions:
+- Open an issue on GitHub
+- Check the documentation in `DATABASE_SCHEMA.md` and `WORKFLOW_DOCUMENTATION.md`
+- Review the API endpoints and examples above
+
+## Roadmap
+
+- [ ] Web dashboard UI
+- [ ] SMS campaign management
+- [ ] Advanced analytics and reporting
+- [ ] Multi-language support
+- [ ] Mobile app for monitoring
+- [ ] API rate limiting enhancements
+- [ ] Kubernetes deployment manifests 
